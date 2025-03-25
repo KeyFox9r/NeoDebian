@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=NeoDevian Post-Install
+Comment=Run NeoDevian system customization script
+Exec=/usr/local/bin/neo-devian-postinstall.sh
+Icon=system-run
+Terminal=true
+Categories=Utility;
+X-GNOME-Autostart-enabled=true
+X-KDE-StartupNotify=true
+StartupNotify=true
