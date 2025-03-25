@@ -35,69 +35,62 @@ echo "[+] Updating base system..."
 sudo apt update && sudo apt upgrade -y
 
 echo "[+] Installing essential tools..."
-sudo apt install -y \
-  build-essential curl wget git sudo ca-certificates \
-  zsh unzip gpg lsb-release software-properties-common \
-  bash-completion neofetch lsd
+sudo apt install -y curl wget git neofetch unzip gnupg2 ca-certificates gpg lsb-release software-properties-common apt-transport-https
 
-### --- VS CODE + PYCHARM INSTALL --- ###
-echo "[+] Installing Visual Studio Code..."
+### --- GIT CONFIGURATION --- ###
+echo "[+] Configuring Git..."
+git config --global user.name "$GITHUB_USERNAME"
+git config --global user.email "$GITHUB_EMAIL"
+
+### --- INSTALL DEVELOPER TOOLS --- ###
+echo "[+] Installing developer tools..."
+# VS Code (Microsoft)
 wget -qO vscode.deb "https://update.code.visualstudio.com/latest/linux-deb-x64/stable"
 sudo apt install -y ./vscode.deb && rm vscode.deb
 
-echo "[+] Installing JetBrains Toolbox for PyCharm..."
-wget -qO toolbox.tar.gz "https://download.jetbrains.com/toolbox/jetbrains-toolbox-2.2.1.19922.tar.gz"
-tar -xzf toolbox.tar.gz -C $INSTALL_DIR && rm toolbox.tar.gz
-TOOLBOX_DIR=$(find $INSTALL_DIR -maxdepth 1 -type d -name "jetbrains-toolbox-*" | head -n 1)
-$TOOLBOX_DIR/jetbrains-toolbox &
+# JetBrains Toolbox (for PyCharm)
+wget -qO toolbox.tar.gz "https://download.jetbrains.com/toolbox/jetbrains-toolbox-1.28.1.15219.tar.gz"
+tar -xzf toolbox.tar.gz && rm toolbox.tar.gz
+TOOLBOX_DIR=$(find . -maxdepth 1 -type d -name "jetbrains-toolbox-*" | head -n 1)
+"$TOOLBOX_DIR/jetbrains-toolbox" &
 
-### --- GIT + GITHUB CLI --- ###
-echo "[+] Installing GitHub CLI..."
-type -p curl >/dev/null || sudo apt install curl -y
-curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
-  sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
-  https://cli.github.com/packages stable main" | \
-  sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-sudo apt update && sudo apt install gh -y
+### --- INSTALL KDE COMPONENTS --- ###
+echo "[+] Installing KDE Plasma components..."
+sudo apt install -y kde-plasma-desktop sddm latte-dock qml-module-qtquick-controls2 kde-config-sddm
 
-if [[ -n "$GITHUB_USERNAME" ]]; then
-  gh auth login
-  git config --global user.name "$GITHUB_USERNAME"
-  git config --global user.email "$GITHUB_EMAIL"
-fi
+# Enable SDDM display manager
+sudo systemctl enable sddm
 
-### --- ZSH + GARUDA STYLE TERMINAL --- ###
-echo "[+] Setting up Zsh and aesthetic terminal..."
-sudo apt install -y zsh fonts-powerline
-chsh -s $(which zsh)
+### --- THEMING --- ###
+echo "[+] Cloning NeoTokyo theming..."
+mkdir -p "$INSTALL_DIR/.local/share/neotokyo"
+git clone https://github.com/$GITHUB_USERNAME/NeoDevian "$INSTALL_DIR/.local/share/neotokyo"
 
-# Install Oh-My-Zsh
-export RUNZSH=no
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+# Autostart helper
+mkdir -p "$HOME/.config/autostart"
+cp "$INSTALL_DIR/.local/share/neotokyo/desktop/neotokyo.desktop" "$HOME/.config/autostart/neotokyo.desktop"
 
-# Powerlevel10k
-git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/.oh-my-zsh/custom/themes/powerlevel10k
-sed -i 's|ZSH_THEME=.*|ZSH_THEME=\"powerlevel10k/powerlevel10k\"|' ~/.zshrc
+# Run theme setup
+bash "$INSTALL_DIR/.local/share/neotokyo/themes/neotokyo/neotokyotheme.sh"
 
-### --- KDE + PLASMA TOOLS --- ###
-echo "[+] Installing KDE extras..."
-sudo apt install -y \
-  kde-spectacle ark dolphin-plugins filelight partitionmanager \
-  ffmpegthumbs kdegraphics-thumbnailers
-
-### --- FIRMWARE (OPTIONAL) --- ###
-echo "[+] Installing firmware packages..."
-sudo apt install -y firmware-linux firmware-misc-nonfree firmware-amd-graphics
+### --- FIX TRACKPAD TAP GESTURES --- ###
+echo "[+] Enabling tap-to-click gestures..."
+mkdir -p ~/.config/xorg
+cat <<EOF > ~/.config/xorg/40-libinput.conf
+Section "InputClass"
+  Identifier "libinput touchpad catchall"
+  MatchIsTouchpad "on"
+  MatchDevicePath "/dev/input/event*"
+  Driver "libinput"
+  Option "Tapping" "on"
+  Option "TappingButtonMap" "lmr"
+EndSection
+EOF
 
 ### --- CLEANUP --- ###
 echo "[+] Cleaning up..."
-sudo apt autoremove -y && sudo apt clean
+sudo apt autoremove -y
 
-### --- DONE --- ###
-echo -e "\n[✓] Setup complete! Please reboot and finish setting up JetBrains Toolbox."
-echo -e "\n👉 You may want to configure GRUB and themes next."
-echo -e "\n🚀 Happy hacking, dev! — Loki out."
-
-exit 0
+### --- COMPLETE --- ###
+echo "[✓] NeoDevian post-install complete. Please reboot your system!"
+echo "[✓] If Latte Dock doesn't start, try running it manually or re-apply the theme."
